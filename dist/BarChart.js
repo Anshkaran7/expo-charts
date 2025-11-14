@@ -115,7 +115,7 @@ var BarChart = function (_a) {
             var value = (maxValue * i) / gridCount;
             return (react_1.default.createElement(react_native_svg_1.G, { key: i },
                 react_1.default.createElement(react_native_svg_1.Line, { x1: padding.left, y1: y + padding.top, x2: width - padding.right, y2: y + padding.top, stroke: axisColor, strokeWidth: "0.5", strokeDasharray: "5,5", opacity: 0.5 }),
-                showYAxisLabels && (react_1.default.createElement(react_native_svg_1.Text, { x: padding.left - 5, y: y + padding.top + 4, textAnchor: "end", fill: labelColor, fontSize: "10" }, formatValue(Math.round(value))))));
+                showYAxisLabels && (react_1.default.createElement(react_native_svg_1.Text, { x: padding.left - 5, y: y + padding.top + 4, textAnchor: "end", fill: labelColor, fontSize: "10" }, formatValue(value)))));
         });
     };
     var Tooltip = function (_a) {

@@ -149,7 +149,7 @@ const BarChart: React.FC<BarChartProps> = ({
               fill={labelColor}
               fontSize="10"
             >
-              {formatValue(Math.round(value))}
+              {formatValue(value)}
             </SvgText>
           )}
         </G>

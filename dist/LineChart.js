@@ -166,7 +166,7 @@ var LineChart = function (_a) {
             var value = maxValue - (i * range) / gridCount;
             return (react_1.default.createElement(react_native_svg_1.G, { key: i },
                 react_1.default.createElement(react_native_svg_1.Line, { x1: padding.left, y1: y, x2: width - padding.right, y2: y, stroke: axisColor, strokeWidth: "1", strokeDasharray: "5,5", opacity: 0.5 }),
-                showYAxisLabels && (react_1.default.createElement(react_native_svg_1.Text, { x: padding.left - 10, y: y + 4, textAnchor: "end", fill: labelColor, fontSize: "11", fontWeight: "500" }, formatValue(Math.round(value))))));
+                showYAxisLabels && (react_1.default.createElement(react_native_svg_1.Text, { x: padding.left - 10, y: y + 4, textAnchor: "end", fill: labelColor, fontSize: "11", fontWeight: "500" }, formatValue(value)))));
         });
     };
     var Tooltip = function (_a) {

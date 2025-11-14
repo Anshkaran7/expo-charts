@@ -231,7 +231,7 @@ const LineChart: React.FC<LineChartProps> = ({
               fontSize="11"
               fontWeight="500"
             >
-              {formatValue(Math.round(value))}
+              {formatValue(value)}
             </SvgText>
           )}
         </G>
