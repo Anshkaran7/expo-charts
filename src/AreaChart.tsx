@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Dimensions, PanResponder, StyleSheet, Text, View } from "react-native";
+import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
 import Svg, {
   Circle,
   Defs,
@@ -11,13 +11,13 @@ import Svg, {
   Stop,
   Text as SvgText,
 } from "react-native-svg";
-import type { LineChartProps } from "./types";
+import type { AreaChartProps } from "./types";
 
-const LineChart: React.FC<LineChartProps> = ({
+const AreaChart: React.FC<AreaChartProps> = ({
   data = [],
   width = Dimensions.get("window").width - 40,
   height = 250,
-  lineColor = "#2563EB",
+  color = "#2563EB",
   accentColor = "#7C3AED",
   labelColor = "#334155",
   axisColor = "#E2E8F0",
@@ -26,25 +26,20 @@ const LineChart: React.FC<LineChartProps> = ({
   subtitle = "",
   animate = true,
   showGrid = true,
-  gridCount = 4,
   showDots = true,
-  showArea = true,
   formatValue = (value) => value.toString(),
   formatLabel = (index) => (index + 1).toString(),
   onPointPress = () => {},
   style = {},
   showXAxisLabels = true,
   showYAxisLabels = true,
-  tooltipBackgroundColor = accentColor,
-  selectedIndex: controlledSelectedIndex,
 }) => {
-  const [selectedPoint, setSelectedPoint] = useState<number | null>(
-    controlledSelectedIndex ?? null
-  );
+  const [selectedPoint, setSelectedPoint] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(animate ? 0 : 1)).current;
   const padding = { top: 24, right: 18, bottom: 34, left: 54 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
+  const gradientId = `areaGradient-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   useEffect(() => {
     if (!animate) return;
@@ -56,20 +51,12 @@ const LineChart: React.FC<LineChartProps> = ({
     }).start();
   }, [animate, data, fadeAnim]);
 
-  useEffect(() => {
-    if (controlledSelectedIndex !== undefined) {
-      setSelectedPoint(controlledSelectedIndex);
-    }
-  }, [controlledSelectedIndex]);
-
   const geometry = useMemo(() => {
-    const maxValue = Math.max(...data) * 1.08;
-    const minValue = Math.min(...data) * 0.92;
-    const range = maxValue - minValue || 1;
+    const maxValue = Math.max(...data) * 1.08 || 1;
     const points = data.map((value, index) => ({
       value,
       x: padding.left + (index / Math.max(data.length - 1, 1)) * chartWidth,
-      y: padding.top + chartHeight - ((value - minValue) / range) * chartHeight,
+      y: padding.top + chartHeight - (value / maxValue) * chartHeight,
     }));
     const linePath = points.reduce((path, point, index) => {
       if (index === 0) return `M ${point.x} ${point.y}`;
@@ -81,48 +68,15 @@ const LineChart: React.FC<LineChartProps> = ({
       ? `${linePath} L ${points[points.length - 1].x} ${height - padding.bottom} L ${points[0].x} ${height - padding.bottom} Z`
       : "";
 
-    return { areaPath, linePath, maxValue, minValue, points, range };
+    return { areaPath, linePath, maxValue, points };
   }, [chartHeight, chartWidth, data, height]);
+
+  if (!data.length) return <Text style={styles.noData}>No data available</Text>;
 
   const selectPoint = (index: number) => {
     setSelectedPoint(index);
     onPointPress(data[index], index);
   };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (event) => {
-          const { locationX } = event.nativeEvent;
-          const closest = geometry.points.reduce((previous, current) =>
-            Math.abs(current.x - locationX) < Math.abs(previous.x - locationX)
-              ? current
-              : previous
-          );
-          selectPoint(geometry.points.indexOf(closest));
-        },
-        onPanResponderMove: (event) => {
-          const { locationX } = event.nativeEvent;
-          const closest = geometry.points.reduce((previous, current) =>
-            Math.abs(current.x - locationX) < Math.abs(previous.x - locationX)
-              ? current
-              : previous
-          );
-          selectPoint(geometry.points.indexOf(closest));
-        },
-      }),
-    [geometry.points]
-  );
-
-  if (!data.length) return <Text style={styles.noData}>No data available</Text>;
-
-  const selected =
-    selectedPoint !== null && geometry.points[selectedPoint]
-      ? geometry.points[selectedPoint]
-      : null;
-  const gradientId = `lineAreaGradient-${lineColor.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   return (
     <View style={[styles.container, { backgroundColor }, style]}>
@@ -132,18 +86,18 @@ const LineChart: React.FC<LineChartProps> = ({
           {subtitle ? <Text style={[styles.subtitle, { color: labelColor }]}>{subtitle}</Text> : null}
         </View>
       )}
-      <Animated.View style={{ opacity: fadeAnim }} {...panResponder.panHandlers}>
+      <Animated.View style={{ opacity: fadeAnim }}>
         <Svg width={width} height={height}>
           <Defs>
             <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={lineColor} stopOpacity="0.26" />
-              <Stop offset="1" stopColor={lineColor} stopOpacity="0.02" />
+              <Stop offset="0" stopColor={color} stopOpacity="0.38" />
+              <Stop offset="1" stopColor={color} stopOpacity="0.04" />
             </LinearGradient>
           </Defs>
           {showGrid &&
-            Array.from({ length: gridCount + 1 }).map((_, index) => {
-              const y = padding.top + (index / gridCount) * chartHeight;
-              const value = geometry.maxValue - (index / gridCount) * geometry.range;
+            Array.from({ length: 5 }).map((_, index) => {
+              const y = padding.top + (index / 4) * chartHeight;
+              const value = geometry.maxValue - (index / 4) * geometry.maxValue;
 
               return (
                 <G key={`grid-${index}`}>
@@ -170,11 +124,11 @@ const LineChart: React.FC<LineChartProps> = ({
                 </G>
               );
             })}
-          {showArea ? <Path d={geometry.areaPath} fill={`url(#${gradientId})`} /> : null}
+          <Path d={geometry.areaPath} fill={`url(#${gradientId})`} />
           <Path
             d={geometry.linePath}
             fill="none"
-            stroke={lineColor}
+            stroke={color}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={3}
@@ -187,7 +141,7 @@ const LineChart: React.FC<LineChartProps> = ({
                   cy={point.y}
                   r={selectedPoint === index ? 6 : 4}
                   fill={selectedPoint === index ? accentColor : backgroundColor}
-                  stroke={lineColor}
+                  stroke={color}
                   strokeWidth={3}
                   onPress={() => selectPoint(index)}
                 />
@@ -213,37 +167,6 @@ const LineChart: React.FC<LineChartProps> = ({
               ) : null}
             </G>
           ))}
-          {selected ? (
-            <G>
-              <Line
-                x1={selected.x}
-                x2={selected.x}
-                y1={padding.top}
-                y2={height - padding.bottom}
-                stroke={accentColor}
-                strokeDasharray="4 5"
-                strokeWidth={1.5}
-              />
-              <Rect
-                x={Math.min(Math.max(selected.x - 46, padding.left), width - 104)}
-                y={Math.max(selected.y - 48, 8)}
-                width={92}
-                height={30}
-                rx={8}
-                fill={tooltipBackgroundColor}
-              />
-              <SvgText
-                x={Math.min(Math.max(selected.x, padding.left + 46), width - 58)}
-                y={Math.max(selected.y - 29, 27)}
-                fill="#FFFFFF"
-                fontSize={12}
-                fontWeight="700"
-                textAnchor="middle"
-              >
-                {formatValue(selected.value)}
-              </SvgText>
-            </G>
-          ) : null}
         </Svg>
       </Animated.View>
     </View>
@@ -258,20 +181,20 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 12,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
+  noData: {
+    color: "#64748B",
+    marginVertical: 20,
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 13,
     marginTop: 4,
     opacity: 0.72,
   },
-  noData: {
-    color: "#64748B",
-    marginVertical: 20,
-    textAlign: "center",
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
   },
 });
 
-export default LineChart;
+export default AreaChart;

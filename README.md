@@ -9,25 +9,15 @@ A modern, customizable charting library built specifically for Expo and React Na
 
 ## ✨ Current Features
 
-- 📊 Beautiful Bar and Line charts with more coming soon!
+- 📊 Beautiful Bar, Line, Area, Pie, and Donut charts
 - 📱 Built specifically for Expo and React Native
 - 🎨 Fully customizable colors and styles
 - ⚡ Smooth animations
 - 📱 Responsive design
 - 🔥 High performance
 - 💪 TypeScript support
-- 🔍 Interactive tooltips
+- 🔍 Interactive tooltips and press/drag callbacks
 - 📦 Lightweight
-
-## 🗺️ Roadmap
-
-We're actively working on expanding our chart offerings! Coming soon:
-
-- 🥧 Pie Charts
-- 📈 Area Charts
-- 📊 Stacked Bar Charts
-- 📉 Candlestick Charts
-- 🎯 Radar Charts
 
 ## 🚀 Installation
 
@@ -51,34 +41,57 @@ pnpm add expo-charts react-native-svg
 ## 🎯 Quick Start
 
 ```jsx
-import { BarChart, LineChart } from "expo-charts";
+import { AreaChart, BarChart, DonutChart, LineChart, PieChart } from "expo-charts";
 
-// Bar Chart Example
 export default function App() {
+  const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+
   return (
-    <BarChart
-      data={data}
-      width={350}
-      height={250}
-      title="Monthly Sales"
-      primaryColor="#FF5733"
-      secondaryColor="#C70039"
-      formatValue={(value) => `$${value}K`}
-      formatLabel={(index) => ["Jan", "Feb", "Mar", "Apr", "May", "Jun"][index]}
-      onBarPress={(value, index) => {
-        console.log(`Bar ${index} pressed with value ${value}`);
-      }}
-      getBarColor={(value) => (value > 50 ? "#48BB78" : "#4C51BF")}
-      showXAxisLabels={true}
-      showYAxisLabels={true}
-    />
+    <>
+      <LineChart
+        data={[18, 24, 22, 31, 36, 42]}
+        width={350}
+        height={250}
+        title="Revenue"
+        subtitle="Drag or tap points"
+        lineColor="#2563EB"
+        accentColor="#7C3AED"
+        formatValue={(value) => `$${value}K`}
+        formatLabel={(index) => labels[index]}
+        onPointPress={(value, index) => console.log(value, index)}
+      />
+
+      <BarChart
+        data={[12, 19, 15, 28, 32, 41]}
+        width={350}
+        height={240}
+        title="Users"
+        primaryColor="#2563EB"
+        secondaryColor="#10B981"
+        formatLabel={(index) => labels[index]}
+        onBarPress={(value, index) => console.log(value, index)}
+      />
+
+      <DonutChart
+        data={[
+          { label: "Organic", value: 42 },
+          { label: "Paid", value: 28 },
+          { label: "Referral", value: 18 },
+          { label: "Direct", value: 12 },
+        ]}
+        centerValue="100%"
+        centerLabel="Traffic"
+        width={300}
+        height={300}
+      />
+    </>
   );
 }
 ```
 
 ## 📖 Available Charts
 
-### 1. Bar Chart
+### Bar Chart
 
 The Bar Chart component offers extensive customization and interactivity:
 
@@ -86,17 +99,14 @@ The Bar Chart component offers extensive customization and interactivity:
 
 ```jsx
 <BarChart
-  data={[
-    { label: "A", value: 10 },
-    { label: "B", value: 20 },
-  ]}
-  width={300}
-  height={200}
+  data={[10, 20, 18, 32]}
+  width={350}
+  height={240}
   title="Sales Data"
-  colors={["#4C51BF", "#48BB78"]}
-  animate={true}
-  showValues={true}
-  showGrid={true}
+  primaryColor="#2563EB"
+  secondaryColor="#7C3AED"
+  formatLabel={(index) => ["Q1", "Q2", "Q3", "Q4"][index]}
+  onBarPress={(value, index) => console.log(value, index)}
 />
 ```
 
@@ -104,23 +114,22 @@ The Bar Chart component offers extensive customization and interactivity:
 
 | Prop           | Type                                     | Default             | Description           |
 | -------------- | ---------------------------------------- | ------------------- | --------------------- |
-| data           | Array<{label: string, value: number}>    | []                  | Data to be displayed  |
+| data           | Array<number>                            | []                  | Data to be displayed  |
 | width          | number                                   | 300                 | Width of the chart    |
 | height         | number                                   | 200                 | Height of the chart   |
 | title          | string                                   | ''                  | Chart title           |
 | primaryColor   | string                                   | '#4C51BF'           | Primary bar color     |
 | secondaryColor | string                                   | '#48BB78'           | Secondary bar color   |
 | animate        | boolean                                  | true                | Enable animations     |
-| showValues     | boolean                                  | true                | Show values on bars   |
 | showGrid       | boolean                                  | true                | Show background grid  |
 | formatValue    | (value: number) => string                | (v) => v.toString() | Format value labels   |
 | formatLabel    | (index: number) => string                | (i) => i.toString() | Format x-axis labels  |
 | onBarPress     | (value: number, index: number) => void   | undefined           | Bar press handler     |
 | getBarColor    | (value: number, index: number) => string | undefined           | Custom color function |
 
-### 2. Line Chart
+### Line Chart
 
-The Line Chart component supports both straight and curved lines with customizable styling:
+The Line Chart component supports curved lines, area fills, tooltips, and drag/tap selection:
 
 ![Line Chart Example](./assets/linechart.png)
 
@@ -142,6 +151,7 @@ The Line Chart component supports both straight and curved lines with customizab
   animate={true}
   showDots={true}
   showArea={true}
+  onPointPress={(value, index) => console.log(value, index)}
 />
 ```
 
@@ -165,6 +175,55 @@ The Line Chart component supports both straight and curved lines with customizab
 | animate         | boolean                   | true                | Enable animations         |
 | formatValue     | (value: number) => string | (v) => v.toString() | Format y-axis labels      |
 | formatLabel     | (index: number) => string | (i) => i.toString() | Format x-axis labels      |
+| onPointPress    | (value, index) => void    | undefined           | Point select handler      |
+
+### Area Chart
+
+```jsx
+<AreaChart
+  data={[12, 18, 16, 27, 34, 39]}
+  width={350}
+  height={240}
+  title="Engagement"
+  color="#10B981"
+  accentColor="#2563EB"
+  formatLabel={(index) => labels[index]}
+  onPointPress={(value, index) => console.log(value, index)}
+/>
+```
+
+### Pie Chart
+
+```jsx
+<PieChart
+  data={[
+    { label: "Mobile", value: 42 },
+    { label: "Web", value: 28 },
+    { label: "Tablet", value: 18 },
+    { label: "API", value: 12 },
+  ]}
+  width={300}
+  height={300}
+  onSegmentPress={(item, index) => console.log(item, index)}
+/>
+```
+
+### Donut Chart
+
+```jsx
+<DonutChart
+  data={[
+    { label: "Organic", value: 42 },
+    { label: "Paid", value: 28 },
+    { label: "Referral", value: 18 },
+    { label: "Direct", value: 12 },
+  ]}
+  centerValue="$12.4K"
+  centerLabel="Total"
+  width={300}
+  height={300}
+/>
+```
 
 ## 🎨 Styling Guide
 

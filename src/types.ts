@@ -1,73 +1,75 @@
-export interface ChartData {
-  labels: string[];
-  datasets: number[];
+export interface ChartPoint {
+  label: string;
+  value: number;
+  color?: string;
 }
 
-export interface ChartProps {
-  data: ChartData;
+export interface CartesianChartProps {
+  data: number[];
   width?: number;
   height?: number;
-  color?: string;
-  style?: any;
+  labelColor?: string;
+  axisColor?: string;
+  backgroundColor?: string;
+  title?: string;
+  animate?: boolean;
+  showGrid?: boolean;
+  gridCount?: number;
+  formatValue?: (value: number) => string;
+  formatLabel?: (index: number) => string;
+  showXAxisLabels?: boolean;
+  showYAxisLabels?: boolean;
+  style?: object;
 }
 
-export interface PieChartData {
-  data: Array<{
-    value: number;
-    label: string;
-    color?: string;
-  }>;
+export interface BarChartProps extends CartesianChartProps {
+  primaryColor?: string;
+  secondaryColor?: string;
+  getBarColor?: (value: number, index: number) => string;
+  onBarPress?: (value: number, index: number) => void;
+  selectedIndex?: number | null;
+}
+
+export interface LineChartProps extends CartesianChartProps {
+  lineColor?: string;
+  accentColor?: string;
+  subtitle?: string;
+  showDots?: boolean;
+  showArea?: boolean;
+  onPointPress?: (value: number, index: number) => void;
+  selectedIndex?: number | null;
+  tooltipBackgroundColor?: string;
+}
+
+export interface AreaChartProps extends CartesianChartProps {
+  color?: string;
+  accentColor?: string;
+  subtitle?: string;
+  showDots?: boolean;
+  onPointPress?: (value: number, index: number) => void;
 }
 
 export interface PieChartProps {
-  data: PieChartData;
+  data: ChartPoint[];
   width?: number;
   height?: number;
-  style?: any;
-}
-
-export interface BarChartProps {
-  data: number[];
-  width?: number;
-  height?: number;
-  primaryColor?: string;
-  secondaryColor?: string;
-  labelColor?: string;
-  axisColor?: string;
-  backgroundColor?: string;
-  title?: string;
+  colors?: string[];
+  strokeWidth?: number;
   animate?: boolean;
-  showGrid?: boolean;
-  gridCount?: number;
-  formatValue?: (value: number) => string;
-  formatLabel?: (index: number) => string;
-  getBarColor?: (value: number, index: number) => string;
-  onBarPress?: (value: number, index: number) => void;
-  showXAxisLabels?: boolean;
-  showYAxisLabels?: boolean;
+  showLabels?: boolean;
+  showLegend?: boolean;
+  showPercentages?: boolean;
+  donutRadius?: number;
+  selectedOffset?: number;
+  labelColor?: string;
+  legendTextColor?: string;
+  onSegmentPress?: (item: ChartPoint, index: number) => void;
   style?: object;
 }
 
-export interface LineChartProps {
-  data: number[];
-  width?: number;
-  height?: number;
-  lineColor?: string;
-  accentColor?: string;
-  labelColor?: string;
-  axisColor?: string;
-  backgroundColor?: string;
-  title?: string;
-  subtitle?: string;
-  animate?: boolean;
-  showGrid?: boolean;
-  gridCount?: number;
-  showDots?: boolean;
-  showArea?: boolean;
-  formatValue?: (value: number) => string;
-  formatLabel?: (index: number) => string;
-  onPointPress?: (value: number, index: number) => void;
-  style?: object;
-  showXAxisLabels?: boolean;
-  showYAxisLabels?: boolean;
+export interface DonutChartProps extends PieChartProps {
+  centerValue?: string | number;
+  centerLabel?: string;
+  centerTextColor?: string;
+  centerLabelColor?: string;
 }

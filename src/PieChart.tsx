@@ -1,176 +1,194 @@
-import React from "react";
-import { View, Animated } from "react-native";
-import Svg, {
-  Path,
-  Defs,
-  LinearGradient,
-  Stop,
-  G,
-  Text as SvgText,
-} from "react-native-svg";
-import { Text } from "react-native";
-
-interface PieChartProps {
-  data: Array<{ value: number; label: string }>;
-  width?: number;
-  height?: number;
-  colors?: string[];
-  strokeWidth?: number;
-  animate?: boolean;
-  showLabels?: boolean;
-  showPercentages?: boolean;
-}
-
-interface ArcData {
-  path: string;
-  value: number;
-  percentage: number;
-  label: string;
-  color: string;
-  labelX: number;
-  labelY: number;
-}
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Svg, { G, Path, Text as SvgText } from "react-native-svg";
+import type { PieChartProps } from "./types";
 
 const PieChart: React.FC<PieChartProps> = ({
   data = [],
   width = 300,
   height = 300,
-  colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD"],
+  colors = ["#2563EB", "#7C3AED", "#10B981", "#F59E0B", "#EF4444"],
   strokeWidth = 2,
   animate = true,
   showLabels = true,
+  showLegend = true,
   showPercentages = true,
+  donutRadius = 0,
+  selectedOffset = 12,
+  labelColor = "#FFFFFF",
+  legendTextColor = "#334155",
+  onSegmentPress = () => {},
+  style = {},
 }) => {
-  const [animation] = React.useState(new Animated.Value(0));
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  const radius = Math.min(width, height) / 2 - 40;
+  const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
+  const fadeAnim = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  const total = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
+  const radius = Math.min(width, height) / 2 - 34;
   const centerX = width / 2;
   const centerY = height / 2;
+  const innerRadius = donutRadius > 0 ? radius * (donutRadius / 100) : 0;
 
-  React.useEffect(() => {
-    if (animate) {
-      Animated.timing(animation, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, []);
+  useEffect(() => {
+    if (!animate) return;
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 450,
+      useNativeDriver: true,
+    }).start();
+  }, [animate, data, fadeAnim]);
 
-  const getArcPath = (startAngle: number, endAngle: number) => {
+  const arcPath = (
+    startAngle: number,
+    endAngle: number,
+    offset: number
+  ) => {
+    const midAngle = startAngle + (endAngle - startAngle) / 2;
+    const offsetX = Math.cos(midAngle) * offset;
+    const offsetY = Math.sin(midAngle) * offset;
     const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
-    const x1 = centerX + radius * Math.cos(startAngle);
-    const y1 = centerY + radius * Math.sin(startAngle);
-    const x2 = centerX + radius * Math.cos(endAngle);
-    const y2 = centerY + radius * Math.sin(endAngle);
-    return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+    const outerStartX = centerX + offsetX + radius * Math.cos(startAngle);
+    const outerStartY = centerY + offsetY + radius * Math.sin(startAngle);
+    const outerEndX = centerX + offsetX + radius * Math.cos(endAngle);
+    const outerEndY = centerY + offsetY + radius * Math.sin(endAngle);
+
+    if (innerRadius > 0) {
+      const innerEndX = centerX + offsetX + innerRadius * Math.cos(endAngle);
+      const innerEndY = centerY + offsetY + innerRadius * Math.sin(endAngle);
+      const innerStartX = centerX + offsetX + innerRadius * Math.cos(startAngle);
+      const innerStartY = centerY + offsetY + innerRadius * Math.sin(startAngle);
+
+      return `M ${outerStartX} ${outerStartY} A ${radius} ${radius} 0 ${largeArc} 1 ${outerEndX} ${outerEndY} L ${innerEndX} ${innerEndY} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStartX} ${innerStartY} Z`;
+    }
+
+    return `M ${centerX + offsetX} ${centerY + offsetY} L ${outerStartX} ${outerStartY} A ${radius} ${radius} 0 ${largeArc} 1 ${outerEndX} ${outerEndY} Z`;
   };
 
-  let startAngle = 0;
-  const arcs = data.map((item, index) => {
-    const percentage = (item.value / total) * 100;
-    const angle = (item.value / total) * 2 * Math.PI;
-    const endAngle = startAngle + angle;
-    const path = getArcPath(startAngle, endAngle);
+  const arcs = useMemo(() => {
+    let startAngle = -Math.PI / 2;
+    return data.map((item, index) => {
+      const percentage = total ? (item.value / total) * 100 : 0;
+      const angle = total ? (item.value / total) * Math.PI * 2 : 0;
+      const endAngle = startAngle + angle;
+      const midAngle = startAngle + angle / 2;
+      const labelRadius = innerRadius > 0 ? (radius + innerRadius) / 2 : radius * 0.66;
+      const labelX = centerX + labelRadius * Math.cos(midAngle);
+      const labelY = centerY + labelRadius * Math.sin(midAngle);
+      const arc = {
+        color: item.color ?? colors[index % colors.length],
+        endAngle,
+        labelX,
+        labelY,
+        percentage,
+        startAngle,
+        ...item,
+      };
+      startAngle = endAngle;
+      return arc;
+    });
+  }, [colors, data, innerRadius, radius, total]);
 
-    const labelAngle = startAngle + angle / 2;
-    const labelRadius = radius * 0.7;
-    const labelX = centerX + labelRadius * Math.cos(labelAngle);
-    const labelY = centerY + labelRadius * Math.sin(labelAngle);
+  const selectSegment = (index: number) => {
+    setSelectedSegment(selectedSegment === index ? null : index);
+    onSegmentPress(data[index], index);
+  };
 
-    startAngle = endAngle;
-    return {
-      path,
-      value: item.value,
-      percentage,
-      label: item.label,
-      color: colors[index % colors.length],
-      labelX,
-      labelY,
-    };
-  });
+  if (!data.length) return <Text style={styles.noData}>No data available</Text>;
 
   return (
-    <View style={{ alignItems: "center" }}>
+    <Animated.View style={[styles.container, style, { opacity: fadeAnim }]}>
       <Svg width={width} height={height}>
-        <Defs>
-          {arcs.map((arc, index) => (
-            <LinearGradient
-              key={`gradient-${index}`}
-              id={`grad${index}`}
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="1"
-            >
-              <Stop offset="0" stopColor={arc.color} stopOpacity="0.8" />
-              <Stop offset="1" stopColor={arc.color} stopOpacity="0.5" />
-            </LinearGradient>
-          ))}
-        </Defs>
         <G>
           {arcs.map((arc, index) => (
             <G key={`segment-${index}`}>
               <Path
-                d={arc.path}
-                fill={`url(#grad${index})`}
+                d={arcPath(
+                  arc.startAngle,
+                  arc.endAngle,
+                  selectedSegment === index ? selectedOffset : 0
+                )}
+                fill={arc.color}
+                stroke="#FFFFFF"
                 strokeWidth={strokeWidth}
-                stroke="#fff"
+                onPress={() => selectSegment(index)}
               />
-              {showLabels && (
+              {showLabels && arc.percentage >= 5 ? (
                 <SvgText
                   x={arc.labelX}
-                  y={arc.labelY}
-                  fill="#fff"
-                  fontSize="12"
+                  y={arc.labelY + 4}
+                  fill={labelColor}
+                  fontSize={11}
+                  fontWeight="700"
                   textAnchor="middle"
                 >
-                  {arc.label}
-                  {showPercentages && ` (${arc.percentage.toFixed(1)}%)`}
+                  {showPercentages ? `${arc.percentage.toFixed(0)}%` : arc.label}
                 </SvgText>
-              )}
+              ) : null}
             </G>
           ))}
         </G>
       </Svg>
-
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          marginTop: 20,
-          justifyContent: "center",
-          gap: 8,
-        }}
-      >
-        {arcs.map((arc, index) => (
-          <View
-            key={`legend-${index}`}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "rgba(255,255,255,0.1)",
-              padding: 8,
-              borderRadius: 4,
-            }}
-          >
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                backgroundColor: arc.color,
-                borderRadius: 6,
-                marginRight: 6,
-              }}
-            />
-            <Text style={{ color: "#fff", fontSize: 12 }}>
-              {arc.label}: {arc.value} ({arc.percentage.toFixed(1)}%)
-            </Text>
-          </View>
-        ))}
-      </View>
-    </View>
+      {showLegend ? (
+        <View style={styles.legend}>
+          {arcs.map((arc, index) => (
+            <TouchableOpacity
+              key={`legend-${index}`}
+              style={[
+                styles.legendItem,
+                selectedSegment === index && styles.legendItemSelected,
+              ]}
+              onPress={() => selectSegment(index)}
+            >
+              <View style={[styles.swatch, { backgroundColor: arc.color }]} />
+              <Text style={[styles.legendText, { color: legendTextColor }]}>
+                {showPercentages
+                  ? `${arc.label} (${arc.percentage.toFixed(1)}%)`
+                  : arc.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+    </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+  },
+  legend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  legendItem: {
+    alignItems: "center",
+    borderRadius: 8,
+    flexDirection: "row",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  legendItemSelected: {
+    backgroundColor: "rgba(148, 163, 184, 0.18)",
+  },
+  legendText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  noData: {
+    color: "#64748B",
+    marginVertical: 20,
+    textAlign: "center",
+  },
+  swatch: {
+    borderRadius: 5,
+    height: 10,
+    marginRight: 6,
+    width: 10,
+  },
+});
 
 export default PieChart;

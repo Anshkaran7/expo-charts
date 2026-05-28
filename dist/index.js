@@ -17,9 +17,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LineChart = exports.BarChart = void 0;
+exports.AreaChart = exports.DonutChart = exports.PieChart = exports.LineChart = exports.BarChart = void 0;
 var BarChart_1 = require("./BarChart");
 Object.defineProperty(exports, "BarChart", { enumerable: true, get: function () { return __importDefault(BarChart_1).default; } });
 var LineChart_1 = require("./LineChart");
 Object.defineProperty(exports, "LineChart", { enumerable: true, get: function () { return __importDefault(LineChart_1).default; } });
+var PieChart_1 = require("./PieChart");
+Object.defineProperty(exports, "PieChart", { enumerable: true, get: function () { return __importDefault(PieChart_1).default; } });
+var DonutChart_1 = require("./DonutChart");
+Object.defineProperty(exports, "DonutChart", { enumerable: true, get: function () { return __importDefault(DonutChart_1).default; } });
+var AreaChart_1 = require("./AreaChart");
+Object.defineProperty(exports, "AreaChart", { enumerable: true, get: function () { return __importDefault(AreaChart_1).default; } });
 __exportStar(require("./types"), exports);

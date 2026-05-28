@@ -1,273 +1,167 @@
-import React, { useState, useRef, useEffect } from "react";
-import { View, Text, Animated, StyleSheet, Dimensions } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
 import Svg, {
-  Rect,
-  Line,
-  Text as SvgText,
   Defs,
-  LinearGradient,
-  Stop,
   G,
+  LinearGradient,
+  Line,
+  Rect,
+  Stop,
+  Text as SvgText,
 } from "react-native-svg";
-
-interface BarChartProps {
-  data: number[];
-  width?: number;
-  height?: number;
-  primaryColor?: string;
-  secondaryColor?: string;
-  labelColor?: string;
-  axisColor?: string;
-  backgroundColor?: string;
-  title?: string;
-  animate?: boolean;
-  showGrid?: boolean;
-  gridCount?: number;
-  formatValue?: (value: number) => string;
-  formatLabel?: (index: number) => string;
-  getBarColor?: (value: number, index: number) => string;
-  onBarPress?: (value: number, index: number) => void;
-  showXAxisLabels?: boolean;
-  showYAxisLabels?: boolean;
-  style?: object;
-}
+import type { BarChartProps } from "./types";
 
 const BarChart: React.FC<BarChartProps> = ({
   data = [],
-  width = Dimensions.get("window").width,
-  height = 200,
-  primaryColor = "#4C51BF",
-  secondaryColor = "#7F9CF5",
-  labelColor = "#2D3748",
-  axisColor = "#CBD5E0",
+  width = Dimensions.get("window").width - 40,
+  height = 220,
+  primaryColor = "#2563EB",
+  secondaryColor = "#7C3AED",
+  labelColor = "#334155",
+  axisColor = "#E2E8F0",
   backgroundColor = "#FFFFFF",
   title = "",
   animate = true,
   showGrid = true,
-  gridCount = 5,
+  gridCount = 4,
   formatValue = (value) => value.toString(),
   formatLabel = (index) => (index + 1).toString(),
-  getBarColor = (value, index) => {
-    const percentage = (value / Math.max(...data)) * 100;
-    if (percentage >= 80) return "#48BB78";
-    if (percentage >= 50) return "#4C51BF";
-    return "#F56565";
-  },
+  getBarColor,
   onBarPress = () => {},
-  showXAxisLabels = false,
-  showYAxisLabels = false,
+  showXAxisLabels = true,
+  showYAxisLabels = true,
   style = {},
+  selectedIndex: controlledSelectedIndex,
 }) => {
-  const [selectedBar, setSelectedBar] = useState<number | null>(null);
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipData, setTooltipData] = useState({ x: 0, y: 0, value: 0 });
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const barAnims = useRef(data.map(() => new Animated.Value(0))).current;
+  const [selectedBar, setSelectedBar] = useState<number | null>(
+    controlledSelectedIndex ?? null
+  );
+  const fadeAnim = useRef(new Animated.Value(animate ? 0 : 1)).current;
 
   useEffect(() => {
-    if (animate) {
-      Animated.sequence([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.stagger(
-          100,
-          barAnims.map((anim) =>
-            Animated.spring(anim, {
-              toValue: 1,
-              tension: 50,
-              friction: 7,
-              useNativeDriver: true,
-            })
-          )
-        ),
-      ]).start();
+    if (!animate) return;
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 450,
+      useNativeDriver: true,
+    }).start();
+  }, [animate, data, fadeAnim]);
+
+  useEffect(() => {
+    if (controlledSelectedIndex !== undefined) {
+      setSelectedBar(controlledSelectedIndex);
     }
-  }, [data, animate]);
+  }, [controlledSelectedIndex]);
 
-  if (!data.length) return null;
+  if (!data.length) return <Text style={styles.noData}>No data available</Text>;
 
-  const maxValue = Math.max(...data);
-  const padding = { top: 40, right: 20, bottom: 40, left: 40 };
+  const maxValue = Math.max(...data) || 1;
+  const padding = { top: 24, right: 18, bottom: 34, left: 46 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
-  const barWidth = chartWidth / data.length;
+  const slotWidth = chartWidth / data.length;
+  const barWidth = Math.max(16, slotWidth * 0.58);
+  const gradientId = `barGradient-${primaryColor.replace(/[^a-zA-Z0-9]/g, "")}`;
 
-  const handleBarPress = (
-    value: number,
-    index: number,
-    x: number,
-    y: number
-  ) => {
+  const selectBar = (value: number, index: number) => {
     setSelectedBar(selectedBar === index ? null : index);
-    setTooltipVisible(true);
-    setTooltipData({ x: x + barWidth / 2, y, value });
     onBarPress(value, index);
-
-    Animated.sequence([
-      Animated.spring(barAnims[index], {
-        toValue: 0.9,
-        tension: 100,
-        friction: 5,
-        useNativeDriver: true,
-      }),
-      Animated.spring(barAnims[index], {
-        toValue: 1,
-        tension: 100,
-        friction: 5,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
-
-  const GridLines = () => {
-    if (!showGrid) return null;
-
-    return Array.from({ length: gridCount + 1 }).map((_, i) => {
-      const y = chartHeight - (i * chartHeight) / gridCount;
-      const value = (maxValue * i) / gridCount;
-
-      return (
-        <G key={i}>
-          <Line
-            x1={padding.left}
-            y1={y + padding.top}
-            x2={width - padding.right}
-            y2={y + padding.top}
-            stroke={axisColor}
-            strokeWidth="0.5"
-            strokeDasharray="5,5"
-            opacity={0.5}
-          />
-          {showYAxisLabels && (
-            <SvgText
-              x={padding.left - 5}
-              y={y + padding.top + 4}
-              textAnchor="end"
-              fill={labelColor}
-              fontSize="10"
-            >
-              {formatValue(value)}
-            </SvgText>
-          )}
-        </G>
-      );
-    });
-  };
-
-  const Tooltip = ({
-    x,
-    y,
-    value,
-  }: {
-    x: number;
-    y: number;
-    value: number;
-  }) => (
-    <G>
-      <Rect
-        x={x - 40}
-        y={y - 35}
-        width={80}
-        height={25}
-        rx={5}
-        fill="rgba(0,0,0,0.8)"
-      />
-      <SvgText x={x} y={y - 18} textAnchor="middle" fill="#fff" fontSize="12">
-        {formatValue(value)}
-      </SvgText>
-    </G>
-  );
 
   return (
     <View style={[styles.container, { backgroundColor }, style]}>
-      {title && <Text style={styles.title}>{title}</Text>}
+      {title ? <Text style={[styles.title, { color: labelColor }]}>{title}</Text> : null}
       <Animated.View style={{ opacity: fadeAnim }}>
         <Svg width={width} height={height}>
           <Defs>
-            <LinearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={primaryColor} stopOpacity="0.8" />
-              <Stop offset="1" stopColor={secondaryColor} stopOpacity="0.3" />
+            <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={primaryColor} stopOpacity="1" />
+              <Stop offset="1" stopColor={secondaryColor} stopOpacity="0.62" />
             </LinearGradient>
           </Defs>
+          {showGrid &&
+            Array.from({ length: gridCount + 1 }).map((_, index) => {
+              const y = padding.top + (index / gridCount) * chartHeight;
+              const value = maxValue - (index / gridCount) * maxValue;
 
-          <GridLines />
-
-          <Line
-            x1={padding.left}
-            y1={height - padding.bottom}
-            x2={width - padding.right}
-            y2={height - padding.bottom}
-            stroke={axisColor}
-            strokeWidth="2"
-          />
-          <Line
-            x1={padding.left}
-            y1={padding.top}
-            x2={padding.left}
-            y2={height - padding.bottom}
-            stroke={axisColor}
-            strokeWidth="2"
-          />
-
+              return (
+                <G key={`grid-${index}`}>
+                  <Line
+                    x1={padding.left}
+                    x2={width - padding.right}
+                    y1={y}
+                    y2={y}
+                    stroke={axisColor}
+                    strokeDasharray="4 6"
+                    strokeWidth={1}
+                  />
+                  {showYAxisLabels ? (
+                    <SvgText
+                      x={padding.left - 8}
+                      y={y + 4}
+                      fill={labelColor}
+                      fontSize={10}
+                      textAnchor="end"
+                    >
+                      {formatValue(value)}
+                    </SvgText>
+                  ) : null}
+                </G>
+              );
+            })}
           {data.map((value, index) => {
             const barHeight = (value / maxValue) * chartHeight;
-            const x = padding.left + index * barWidth;
-            const y = height - padding.bottom - barHeight;
+            const x = padding.left + index * slotWidth + (slotWidth - barWidth) / 2;
+            const y = padding.top + chartHeight - barHeight;
+            const isSelected = selectedBar === index;
+            const color = getBarColor?.(value, index) ?? `url(#${gradientId})`;
 
             return (
-              <G key={index}>
+              <G key={`bar-${index}`}>
                 <Rect
-                  x={x + barWidth * 0.1}
+                  x={x}
                   y={y}
-                  width={barWidth * 0.8}
+                  width={barWidth}
                   height={barHeight}
-                  fill={
-                    selectedBar === index
-                      ? primaryColor
-                      : getBarColor(value, index)
-                  }
-                  rx={barWidth * 0.1}
-                  opacity={
-                    selectedBar === null || selectedBar === index ? 1 : 0.6
-                  }
-                  onPressIn={() => handleBarPress(value, index, x, y)}
+                  rx={7}
+                  fill={color}
+                  opacity={selectedBar === null || isSelected ? 1 : 0.42}
+                  onPress={() => selectBar(value, index)}
                 />
-
+                <Rect
+                  x={padding.left + index * slotWidth}
+                  y={padding.top}
+                  width={slotWidth}
+                  height={chartHeight}
+                  fill="transparent"
+                  onPress={() => selectBar(value, index)}
+                />
                 <SvgText
                   x={x + barWidth / 2}
-                  y={y - 5}
-                  textAnchor="middle"
+                  y={y - 8}
                   fill={labelColor}
-                  fontSize="10"
-                  fontWeight="bold"
-                  opacity={
-                    selectedBar === null || selectedBar === index ? 1 : 0.6
-                  }
+                  fontSize={10}
+                  fontWeight="700"
+                  textAnchor="middle"
+                  opacity={selectedBar === null || isSelected ? 1 : 0.45}
                 >
                   {formatValue(value)}
                 </SvgText>
-
-                {showXAxisLabels && (
+                {showXAxisLabels ? (
                   <SvgText
                     x={x + barWidth / 2}
-                    y={height - padding.bottom + 20}
-                    textAnchor="middle"
+                    y={height - 12}
                     fill={labelColor}
-                    fontSize="10"
+                    fontSize={11}
+                    textAnchor="middle"
                   >
                     {formatLabel(index)}
                   </SvgText>
-                )}
+                ) : null}
               </G>
             );
           })}
-
-          {tooltipVisible && selectedBar !== null && (
-            <Tooltip {...tooltipData} />
-          )}
         </Svg>
       </Animated.View>
     </View>
@@ -276,16 +170,18 @@ const BarChart: React.FC<BarChartProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
-    borderRadius: 12,
-    margin: 10,
+    borderRadius: 8,
+    padding: 12,
   },
   title: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  noData: {
+    color: "#64748B",
+    marginVertical: 20,
     textAlign: "center",
-    marginBottom: 15,
-    color: "#2D3748",
   },
 });
 
